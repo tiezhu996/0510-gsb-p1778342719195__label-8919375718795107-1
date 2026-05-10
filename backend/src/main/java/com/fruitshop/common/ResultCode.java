@@ -31,7 +31,12 @@ public enum ResultCode {
 
     // 地址相关错误码
     ADDRESS_NOT_FOUND(5001, "地址不存在"),
-    ADDRESS_LIMIT(5002, "地址数量已达上限");
+    ADDRESS_LIMIT(5002, "地址数量已达上限"),
+
+    // 评价相关错误码
+    REVIEW_ORDER_NOT_COMPLETED(6001, "只能评价已完成的订单"),
+    REVIEW_ITEM_NOT_IN_ORDER(6002, "该商品不在此订单中"),
+    REVIEW_ALREADY_EXISTS(6003, "该商品已评价");
 
     private final int code;
     private final String message;

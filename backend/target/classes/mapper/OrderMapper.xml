@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fruitshop.mapper.OrderMapper">
+
+    <resultMap id="OrderResultMap" type="com.fruitshop.entity.Order">
+        <id column="id" property="id"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="user_id" property="userId"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="pay_amount" property="payAmount"/>
+        <result column="freight" property="freight"/>
+        <result column="status" property="status"/>
+        <result column="address_name" property="addressName"/>
+        <result column="address_phone" property="addressPhone"/>
+        <result column="address_detail" property="addressDetail"/>
+        <result column="remark" property="remark"/>
+        <result column="pay_time" property="payTime"/>
+        <result column="ship_time" property="shipTime"/>
+        <result column="logistics_company" property="logisticsCompany"/>
+        <result column="logistics_no" property="logisticsNo"/>
+        <result column="receive_time" property="receiveTime"/>
+        <result column="cancel_time" property="cancelTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="item_count" property="itemCount"/>
+    </resultMap>
+
+    <select id="findById" resultMap="OrderResultMap">
+        SELECT o.*,
+               (SELECT COUNT(*) FROM order_item WHERE order_id = o.id) AS item_count
+        FROM orders o WHERE o.id = #{id}
+    </select>
+
+    <select id="findByIdAndUserId" resultMap="OrderResultMap">
+        SELECT o.*,
+               (SELECT COUNT(*) FROM order_item WHERE order_id = o.id) AS item_count
+        FROM orders o WHERE o.id = #{id} AND o.user_id = #{userId}
+    </select>
+
+    <select id="findByUserId" resultMap="OrderResultMap">
+        SELECT o.*,
+               (SELECT COUNT(*) FROM order_item WHERE order_id = o.id) AS item_count
+        FROM orders o WHERE o.user_id = #{userId}
+        <if test="status != null">
+            AND o.status = #{status}
+        </if>
+        ORDER BY o.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(*) FROM orders WHERE user_id = #{userId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+    </select>
+
+    <select id="countByUserIdAndStatus" resultType="int">
+        SELECT COUNT(*) FROM orders WHERE user_id = #{userId} AND status = #{status}
+    </select>
+
+    <insert id="insert" parameterType="com.fruitshop.entity.Order" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders (order_no, user_id, total_amount, pay_amount, freight, status,
+                           address_name, address_phone, address_detail, remark, create_time, update_time)
+        VALUES (#{orderNo}, #{userId}, #{totalAmount}, #{payAmount}, #{freight}, #{status},
+                #{addressName}, #{addressPhone}, #{addressDetail}, #{remark}, NOW(), NOW())
+    </insert>
+
+    <update id="updateStatus">
+        UPDATE orders SET status = #{status}, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="pay">
+        UPDATE orders SET status = 1, pay_time = NOW(), update_time = NOW() WHERE id = #{id} AND status = 0
+    </update>
+
+    <update id="ship">
+        UPDATE orders SET status = 2, ship_time = NOW(), update_time = NOW() WHERE id = #{id} AND status = 1
+    </update>
+
+    <update id="shipWithLogistics">
+        UPDATE orders SET status = 2, ship_time = NOW(), logistics_company = #{logisticsCompany}, logistics_no = #{logisticsNo}, update_time = NOW() WHERE id = #{id} AND status = 1
+    </update>
+
+    <update id="receive">
+        UPDATE orders SET status = 3, receive_time = NOW(), update_time = NOW() WHERE id = #{id} AND status = 2
+    </update>
+
+    <update id="cancel">
+        UPDATE orders SET status = 4, cancel_time = NOW(), update_time = NOW() WHERE id = #{id} AND status = 0
+    </update>
+
+    <delete id="delete">
+        DELETE FROM orders WHERE id = #{id} AND status IN (3, 4)
+    </delete>
+
+</mapper>

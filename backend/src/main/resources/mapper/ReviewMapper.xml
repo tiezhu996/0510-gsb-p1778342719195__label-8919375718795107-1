@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fruitshop.mapper.ReviewMapper">
+
+    <resultMap id="ReviewResultMap" type="com.fruitshop.entity.Review">
+        <id column="id" property="id"/>
+        <result column="order_id" property="orderId"/>
+        <result column="user_id" property="userId"/>
+        <result column="fruit_id" property="fruitId"/>
+        <result column="order_item_id" property="orderItemId"/>
+        <result column="rating" property="rating"/>
+        <result column="content" property="content"/>
+        <result column="create_time" property="createTime"/>
+        <result column="fruit_name" property="fruitName"/>
+        <result column="fruit_image" property="fruitImage"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.fruitshop.entity.Review" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO review (order_id, user_id, fruit_id, order_item_id, rating, content, create_time)
+        VALUES (#{orderId}, #{userId}, #{fruitId}, #{orderItemId}, #{rating}, #{content}, NOW())
+    </insert>
+
+    <select id="findByOrderItemId" resultMap="ReviewResultMap">
+        SELECT r.*, oi.fruit_name, oi.fruit_image
+        FROM review r
+        LEFT JOIN order_item oi ON r.order_item_id = oi.id
+        WHERE r.order_item_id = #{orderItemId}
+    </select>
+
+    <select id="findByOrderId" resultMap="ReviewResultMap">
+        SELECT r.*, oi.fruit_name, oi.fruit_image
+        FROM review r
+        LEFT JOIN order_item oi ON r.order_item_id = oi.id
+        WHERE r.order_id = #{orderId}
+        ORDER BY r.create_time ASC
+    </select>
+
+    <select id="countByOrderId" resultType="int">
+        SELECT COUNT(*) FROM review WHERE order_id = #{orderId}
+    </select>
+
+    <select id="existsByOrderId" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM review WHERE order_id = #{orderId}
+    </select>
+
+    <select id="findReviewedItemIdsByOrderId" resultType="java.lang.Long">
+        SELECT order_item_id FROM review WHERE order_id = #{orderId}
+    </select>
+
+</mapper>

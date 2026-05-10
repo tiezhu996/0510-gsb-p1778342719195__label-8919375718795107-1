@@ -7,6 +7,7 @@ import com.fruitshop.entity.*;
 import com.fruitshop.exception.BusinessException;
 import com.fruitshop.mapper.*;
 import com.fruitshop.service.OrderService;
+import com.fruitshop.service.ReviewService;
 import com.fruitshop.util.OrderNoUtil;
 import com.fruitshop.vo.CartVO;
 import com.fruitshop.vo.OrderVO;
@@ -14,10 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,11 +28,12 @@ public class OrderServiceImpl implements OrderService {
     private final FruitMapper fruitMapper;
     private final FruitSpecMapper fruitSpecMapper;
     private final OrderNoUtil orderNoUtil;
+    private final ReviewMapper reviewMapper;
 
     public OrderServiceImpl(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
                             CartMapper cartMapper, AddressMapper addressMapper,
                             FruitMapper fruitMapper, FruitSpecMapper fruitSpecMapper,
-                            OrderNoUtil orderNoUtil) {
+                            OrderNoUtil orderNoUtil, ReviewMapper reviewMapper) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
         this.cartMapper = cartMapper;
@@ -42,6 +41,7 @@ public class OrderServiceImpl implements OrderService {
         this.fruitMapper = fruitMapper;
         this.fruitSpecMapper = fruitSpecMapper;
         this.orderNoUtil = orderNoUtil;
+        this.reviewMapper = reviewMapper;
     }
 
     @Override
@@ -151,7 +151,14 @@ public class OrderServiceImpl implements OrderService {
         List<OrderVO> orderVOs = orders.stream().map(order -> {
             List<OrderItem> items = orderItemMapper.findByOrderId(order.getId());
             order.setItems(items);
-            return OrderVO.fromOrder(order);
+            OrderVO vo = OrderVO.fromOrder(order);
+            if (order.getStatus() == Order.STATUS_COMPLETED) {
+                List<Long> reviewedIds = reviewMapper.findReviewedItemIdsByOrderId(order.getId());
+                Set<Long> reviewedIdSet = new HashSet<>(reviewedIds);
+                vo.setReviewedItemIds(reviewedIdSet);
+                vo.setReviewed(items.size() > 0 && items.size() == reviewedIds.size());
+            }
+            return vo;
         }).collect(Collectors.toList());
 
         return PageResult.of(orderVOs, total, page, size);
@@ -167,7 +174,14 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> items = orderItemMapper.findByOrderId(id);
         order.setItems(items);
 
-        return OrderVO.fromOrder(order);
+        OrderVO vo = OrderVO.fromOrder(order);
+        if (order.getStatus() == Order.STATUS_COMPLETED) {
+            List<Long> reviewedIds = reviewMapper.findReviewedItemIdsByOrderId(id);
+            Set<Long> reviewedIdSet = new HashSet<>(reviewedIds);
+            vo.setReviewedItemIds(reviewedIdSet);
+            vo.setReviewed(items.size() > 0 && items.size() == reviewedIds.size());
+        }
+        return vo;
     }
 
     @Override

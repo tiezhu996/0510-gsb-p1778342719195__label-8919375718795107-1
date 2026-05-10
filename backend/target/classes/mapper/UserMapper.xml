@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fruitshop.mapper.UserMapper">
+
+    <resultMap id="UserResultMap" type="com.fruitshop.entity.User">
+        <id column="id" property="id"/>
+        <result column="phone" property="phone"/>
+        <result column="password" property="password"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar" property="avatar"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="findById" resultMap="UserResultMap">
+        SELECT * FROM user WHERE id = #{id}
+    </select>
+
+    <select id="findByPhone" resultMap="UserResultMap">
+        SELECT * FROM user WHERE phone = #{phone}
+    </select>
+
+    <insert id="insert" parameterType="com.fruitshop.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user (phone, password, nickname, avatar, status, create_time, update_time)
+        VALUES (#{phone}, #{password}, #{nickname}, #{avatar}, #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.fruitshop.entity.User">
+        UPDATE user SET
+            nickname = #{nickname},
+            avatar = #{avatar},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE user SET password = #{password}, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updateNickname">
+        UPDATE user SET nickname = #{nickname}, update_time = NOW() WHERE id = #{id}
+    </update>
+
+</mapper>
