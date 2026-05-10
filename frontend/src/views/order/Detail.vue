@@ -75,7 +75,52 @@
                 <span class="text-primary-500">¥{{ item.price }}</span>
                 <span class="text-slate-400 text-sm">x{{ item.quantity }}</span>
               </div>
+              <div v-if="order.status === 3" class="mt-2">
+                <template v-if="getItemReview(item.id)">
+                  <div class="flex items-center gap-1 text-sm text-yellow-500">
+                    <i class="fa-solid fa-star"></i>
+                    <span>{{ getItemReview(item.id).rating }} 星</span>
+                    <span class="text-green-500 ml-2">已评价</span>
+                  </div>
+                  <p v-if="getItemReview(item.id).content" class="text-sm text-slate-600 mt-1 bg-slate-50 rounded-lg p-2">
+                    {{ getItemReview(item.id).content }}
+                  </p>
+                </template>
+                <template v-else>
+                  <button
+                    @click="openReviewDialog(item)"
+                    class="text-sm text-primary-500 hover:text-primary-600 transition"
+                  >
+                    <i class="fa-regular fa-pen-to-square mr-1"></i>
+                    评价商品
+                  </button>
+                </template>
+              </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reviews Section -->
+      <section v-if="order.status === 3 && reviews.length > 0" class="bg-white rounded-3xl p-4 shadow-sm">
+        <h3 class="font-medium mb-4">
+          <i class="fa-solid fa-comments text-primary-500 mr-2"></i>
+          我的评价 ({{ reviews.length }})
+        </h3>
+        <div class="space-y-4">
+          <div v-for="review in reviews" :key="review.id" class="border-b border-slate-100 last:border-0 pb-4 last:pb-0">
+            <div class="flex items-center gap-1 mb-2">
+              <i
+                v-for="star in 5"
+                :key="star"
+                :class="[
+                  'fa-solid fa-star',
+                  star <= review.rating ? 'text-yellow-400' : 'text-slate-200'
+                ]"
+              ></i>
+            </div>
+            <p v-if="review.content" class="text-sm text-slate-700">{{ review.content }}</p>
+            <p class="text-xs text-slate-400 mt-2">{{ formatDateTime(review.createTime) }}</p>
           </div>
         </div>
       </section>
@@ -171,6 +216,13 @@
       :confirmText="dialogConfig.confirmText"
       @confirm="handleDialogConfirm"
     />
+
+    <!-- 评价弹窗 -->
+    <ReviewDialog
+      v-model:visible="reviewDialogVisible"
+      :item="currentReviewItem"
+      @submit="handleSubmitReview"
+    />
   </div>
 </template>
 
@@ -180,7 +232,8 @@ import { useRoute, useRouter } from 'vue-router'
 import NavBar from '@/components/common/NavBar.vue'
 import Loading from '@/components/common/Loading.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
-import { getOrderDetail, payOrder, cancelOrder, receiveOrder } from '@/api/order'
+import ReviewDialog from '@/components/common/ReviewDialog.vue'
+import { getOrderDetail, payOrder, cancelOrder, receiveOrder, createReview, getReviews } from '@/api/order'
 import { showToast } from '@/utils/toast'
 import { useCartStore } from '@/stores/cart'
 
@@ -188,9 +241,9 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const order = ref(null)
+const reviews = ref([])
 const cartStore = useCartStore()
 
-// 弹窗状态
 const dialogVisible = ref(false)
 const dialogConfig = ref({
   title: '',
@@ -199,6 +252,9 @@ const dialogConfig = ref({
   confirmText: '确定',
   action: null
 })
+
+const reviewDialogVisible = ref(false)
+const currentReviewItem = ref(null)
 
 const statusText = computed(() => {
   const map = { 0: '待付款', 1: '待发货', 2: '待收货', 3: '已完成', 4: '已取消' }
@@ -229,7 +285,6 @@ async function fetchDetail() {
   loading.value = true
   try {
     const rawOrder = await getOrderDetail(route.params.id)
-    // 转换后端数据格式到前端期望格式
     order.value = {
       ...rawOrder,
       totalPrice: rawOrder.payAmount,
@@ -255,6 +310,14 @@ async function fetchDetail() {
         image: item.fruitImage,
         spec: item.specName
       }))
+    }
+
+    if (order.value.status === 3) {
+      try {
+        reviews.value = await getReviews(route.params.id)
+      } catch (e) {
+        reviews.value = []
+      }
     }
   } catch {
     order.value = {
@@ -293,6 +356,26 @@ function formatDateTime(dateStr) {
     hour: '2-digit',
     minute: '2-digit'
   }).replace(/\//g, '-')
+}
+
+function getItemReview(orderItemId) {
+  return reviews.value.find(r => r.orderItemId === orderItemId)
+}
+
+function openReviewDialog(item) {
+  currentReviewItem.value = item
+  reviewDialogVisible.value = true
+}
+
+async function handleSubmitReview(data) {
+  try {
+    await createReview(order.value.id, data)
+    showToast('评价成功', 'success')
+    reviewDialogVisible.value = false
+    reviews.value = await getReviews(order.value.id)
+  } catch {
+    // Error handled by interceptor
+  }
 }
 
 async function handlePay() {
@@ -346,16 +429,12 @@ async function handleDialogConfirm() {
 
 async function handleBuyAgain() {
   try {
-    // 将订单中的所有商品重新加入购物车
     for (const item of order.value.items) {
-      // 获取规格ID：这里需要从商品数据中获取，暂时使用 fruitId 作为默认值
-      // 实际场景中需要根据商品规格匹配对应的 specId
       await cartStore.addToCart(item.fruitId, 1, item.quantity)
     }
     showToast('已加入购物车', 'success')
     router.push('/cart')
   } catch (error) {
-    // 如果部分商品已下架或库存不足，显示提示
     console.error('再次购买失败:', error)
     showToast('部分商品已下架或库存不足', 'error')
   }

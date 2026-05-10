@@ -28,6 +28,7 @@ public class OrderVO {
     private LocalDateTime cancelTime;
     private Integer itemCount;
     private List<OrderItem> items;
+    private Boolean hasReview;
 
     public static OrderVO fromOrder(Order order) {
         OrderVO vo = new OrderVO();
@@ -219,5 +220,13 @@ public class OrderVO {
 
     public void setItems(List<OrderItem> items) {
         this.items = items;
+    }
+
+    public Boolean getHasReview() {
+        return hasReview;
+    }
+
+    public void setHasReview(Boolean hasReview) {
+        this.hasReview = hasReview;
     }
 }

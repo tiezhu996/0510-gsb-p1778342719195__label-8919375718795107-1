@@ -29,7 +29,16 @@
         >
           <!-- Order Header -->
           <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <span class="text-sm text-slate-500">订单号：{{ order.orderNo }}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-500">订单号：{{ order.orderNo }}</span>
+              <span
+                v-if="order.status === 3 && order.hasReview"
+                class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full"
+              >
+                <i class="fa-solid fa-star text-yellow-400 mr-1"></i>
+                已评价
+              </span>
+            </div>
             <span :class="['text-sm font-medium', statusColor(order.status)]">
               {{ statusText(order.status) }}
             </span>
