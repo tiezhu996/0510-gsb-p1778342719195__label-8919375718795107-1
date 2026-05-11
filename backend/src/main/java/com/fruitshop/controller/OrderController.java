@@ -3,12 +3,15 @@ package com.fruitshop.controller;
 import com.fruitshop.common.PageResult;
 import com.fruitshop.common.Result;
 import com.fruitshop.dto.request.OrderCreateRequest;
+import com.fruitshop.dto.request.OrderReviewRequest;
+import com.fruitshop.entity.OrderReview;
 import com.fruitshop.service.OrderService;
 import com.fruitshop.util.RequestContext;
 import com.fruitshop.vo.OrderVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -79,5 +82,19 @@ public class OrderController {
         Long userId = RequestContext.getUserId();
         orderService.deleteOrder(id, userId);
         return Result.success();
+    }
+
+    @PostMapping("/{id}/review")
+    public Result<Void> submitReview(@PathVariable Long id, @Valid @RequestBody OrderReviewRequest request) {
+        Long userId = RequestContext.getUserId();
+        orderService.submitReview(id, userId, request);
+        return Result.success();
+    }
+
+    @GetMapping("/{id}/reviews")
+    public Result<List<OrderReview>> getReviews(@PathVariable Long id) {
+        Long userId = RequestContext.getUserId();
+        List<OrderReview> reviews = orderService.getOrderReviews(id, userId);
+        return Result.success(reviews);
     }
 }
