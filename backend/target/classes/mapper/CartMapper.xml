@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fruitshop.mapper.CartMapper">
+
+    <resultMap id="CartResultMap" type="com.fruitshop.entity.Cart">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="fruit_id" property="fruitId"/>
+        <result column="spec_id" property="specId"/>
+        <result column="quantity" property="quantity"/>
+        <result column="selected" property="selected"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="fruit_name" property="fruitName"/>
+        <result column="fruit_image" property="fruitImage"/>
+        <result column="spec_name" property="specName"/>
+        <result column="price" property="price"/>
+        <result column="stock" property="stock"/>
+        <result column="fruit_status" property="fruitStatus"/>
+    </resultMap>
+
+    <select id="findByUserId" resultMap="CartResultMap">
+        SELECT
+            c.id, c.user_id, c.fruit_id, c.spec_id, c.quantity, c.selected, c.create_time, c.update_time,
+            f.name AS fruit_name,
+            f.main_image AS fruit_image,
+            fs.name AS spec_name,
+            COALESCE(fs.price, f.price) AS price,
+            COALESCE(fs.stock, f.stock) AS stock,
+            f.status AS fruit_status
+        FROM cart c
+        LEFT JOIN fruit f ON c.fruit_id = f.id
+        LEFT JOIN fruit_spec fs ON c.spec_id = fs.id
+        WHERE c.user_id = #{userId}
+        ORDER BY c.create_time DESC
+    </select>
+
+    <select id="findById" resultMap="CartResultMap">
+        SELECT
+            c.id, c.user_id, c.fruit_id, c.spec_id, c.quantity, c.selected, c.create_time, c.update_time,
+            f.name AS fruit_name,
+            f.main_image AS fruit_image,
+            fs.name AS spec_name,
+            COALESCE(fs.price, f.price) AS price,
+            COALESCE(fs.stock, f.stock) AS stock,
+            f.status AS fruit_status
+        FROM cart c
+        LEFT JOIN fruit f ON c.fruit_id = f.id
+        LEFT JOIN fruit_spec fs ON c.spec_id = fs.id
+        WHERE c.id = #{id}
+    </select>
+
+    <select id="findByIdAndUserId" resultMap="CartResultMap">
+        SELECT
+            c.id, c.user_id, c.fruit_id, c.spec_id, c.quantity, c.selected, c.create_time, c.update_time,
+            f.name AS fruit_name,
+            f.main_image AS fruit_image,
+            fs.name AS spec_name,
+            COALESCE(fs.price, f.price) AS price,
+            COALESCE(fs.stock, f.stock) AS stock,
+            f.status AS fruit_status
+        FROM cart c
+        LEFT JOIN fruit f ON c.fruit_id = f.id
+        LEFT JOIN fruit_spec fs ON c.spec_id = fs.id
+        WHERE c.id = #{id} AND c.user_id = #{userId}
+    </select>
+
+    <select id="findByUserFruitSpec" resultMap="CartResultMap">
+        SELECT * FROM cart
+        WHERE user_id = #{userId} AND fruit_id = #{fruitId}
+        <choose>
+            <when test="specId != null">
+                AND spec_id = #{specId}
+            </when>
+            <otherwise>
+                AND spec_id IS NULL
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="findByIds" resultMap="CartResultMap">
+        SELECT
+            c.id, c.user_id, c.fruit_id, c.spec_id, c.quantity, c.selected, c.create_time, c.update_time,
+            f.name AS fruit_name,
+            f.main_image AS fruit_image,
+            fs.name AS spec_name,
+            COALESCE(fs.price, f.price) AS price,
+            COALESCE(fs.stock, f.stock) AS stock,
+            f.status AS fruit_status
+        FROM cart c
+        LEFT JOIN fruit f ON c.fruit_id = f.id
+        LEFT JOIN fruit_spec fs ON c.spec_id = fs.id
+        WHERE c.user_id = #{userId} AND c.id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <insert id="insert" parameterType="com.fruitshop.entity.Cart" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO cart (user_id, fruit_id, spec_id, quantity, selected, create_time, update_time)
+        VALUES (#{userId}, #{fruitId}, #{specId}, #{quantity}, #{selected}, NOW(), NOW())
+    </insert>
+
+    <update id="updateQuantity">
+        UPDATE cart SET quantity = #{quantity}, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updateSelected">
+        UPDATE cart SET selected = #{selected}, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updateAllSelected">
+        UPDATE cart SET selected = #{selected}, update_time = NOW() WHERE user_id = #{userId}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM cart WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByIds">
+        DELETE FROM cart WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM cart WHERE user_id = #{userId}
+    </select>
+
+</mapper>
