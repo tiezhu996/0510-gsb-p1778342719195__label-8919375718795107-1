@@ -29,7 +29,15 @@
         >
           <!-- Order Header -->
           <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <span class="text-sm text-slate-500">订单号：{{ order.orderNo }}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-500">订单号：{{ order.orderNo }}</span>
+              <span v-if="order.reviewStatus === 1" class="text-xs px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full">
+                <i class="fa-solid fa-star-half-stroke mr-1"></i>部分评价({{ order.reviewedCount }}/{{ order.totalItemCount }})
+              </span>
+              <span v-else-if="order.reviewStatus === 2" class="text-xs px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full">
+                <i class="fa-solid fa-star mr-1"></i>已评价
+              </span>
+            </div>
             <span :class="['text-sm font-medium', statusColor(order.status)]">
               {{ statusText(order.status) }}
             </span>
@@ -88,6 +96,13 @@
               >
                 确认收货
               </button>
+              <router-link
+                v-if="order.status === 3 && !order.reviewed"
+                :to="`/order/detail/${order.id}`"
+                class="px-4 py-1.5 rounded-full bg-amber-500 text-white text-sm hover:bg-amber-600 transition"
+              >
+                去评价
+              </router-link>
               <button
                 v-if="order.status === 3 || order.status === 4"
                 @click.prevent="handleDelete(order.id)"

@@ -2,6 +2,7 @@ package com.fruitshop.vo;
 
 import com.fruitshop.entity.Order;
 import com.fruitshop.entity.OrderItem;
+import com.fruitshop.entity.OrderReview;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,6 +29,15 @@ public class OrderVO {
     private LocalDateTime cancelTime;
     private Integer itemCount;
     private List<OrderItem> items;
+    private Boolean reviewed;
+    private Integer reviewStatus;
+    private Integer reviewedCount;
+    private Integer totalItemCount;
+    private List<OrderReview> reviews;
+
+    public static final int REVIEW_STATUS_NONE = 0;
+    public static final int REVIEW_STATUS_PARTIAL = 1;
+    public static final int REVIEW_STATUS_ALL = 2;
 
     public static OrderVO fromOrder(Order order) {
         OrderVO vo = new OrderVO();
@@ -51,6 +61,10 @@ public class OrderVO {
         vo.setCancelTime(order.getCancelTime());
         vo.setItemCount(order.getItemCount());
         vo.setItems(order.getItems());
+        vo.setReviewed(false);
+        vo.setReviewStatus(REVIEW_STATUS_NONE);
+        vo.setReviewedCount(0);
+        vo.setTotalItemCount(0);
         return vo;
     }
 
@@ -219,5 +233,45 @@ public class OrderVO {
 
     public void setItems(List<OrderItem> items) {
         this.items = items;
+    }
+
+    public Boolean getReviewed() {
+        return reviewed;
+    }
+
+    public void setReviewed(Boolean reviewed) {
+        this.reviewed = reviewed;
+    }
+
+    public List<OrderReview> getReviews() {
+        return reviews;
+    }
+
+    public void setReviews(List<OrderReview> reviews) {
+        this.reviews = reviews;
+    }
+
+    public Integer getReviewStatus() {
+        return reviewStatus;
+    }
+
+    public void setReviewStatus(Integer reviewStatus) {
+        this.reviewStatus = reviewStatus;
+    }
+
+    public Integer getReviewedCount() {
+        return reviewedCount;
+    }
+
+    public void setReviewedCount(Integer reviewedCount) {
+        this.reviewedCount = reviewedCount;
+    }
+
+    public Integer getTotalItemCount() {
+        return totalItemCount;
+    }
+
+    public void setTotalItemCount(Integer totalItemCount) {
+        this.totalItemCount = totalItemCount;
     }
 }

@@ -3,6 +3,7 @@ package com.fruitshop.service.impl;
 import com.fruitshop.common.PageResult;
 import com.fruitshop.common.ResultCode;
 import com.fruitshop.dto.request.OrderCreateRequest;
+import com.fruitshop.dto.request.OrderReviewRequest;
 import com.fruitshop.entity.*;
 import com.fruitshop.exception.BusinessException;
 import com.fruitshop.mapper.*;
@@ -25,6 +26,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
+    private final OrderReviewMapper orderReviewMapper;
     private final CartMapper cartMapper;
     private final AddressMapper addressMapper;
     private final FruitMapper fruitMapper;
@@ -32,11 +34,13 @@ public class OrderServiceImpl implements OrderService {
     private final OrderNoUtil orderNoUtil;
 
     public OrderServiceImpl(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
+                            OrderReviewMapper orderReviewMapper,
                             CartMapper cartMapper, AddressMapper addressMapper,
                             FruitMapper fruitMapper, FruitSpecMapper fruitSpecMapper,
                             OrderNoUtil orderNoUtil) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
+        this.orderReviewMapper = orderReviewMapper;
         this.cartMapper = cartMapper;
         this.addressMapper = addressMapper;
         this.fruitMapper = fruitMapper;
@@ -147,11 +151,27 @@ public class OrderServiceImpl implements OrderService {
         List<Order> orders = orderMapper.findByUserId(userId, status, offset, size);
         long total = orderMapper.countByUserId(userId, status);
 
-        // 获取订单项
         List<OrderVO> orderVOs = orders.stream().map(order -> {
             List<OrderItem> items = orderItemMapper.findByOrderId(order.getId());
             order.setItems(items);
-            return OrderVO.fromOrder(order);
+            OrderVO vo = OrderVO.fromOrder(order);
+            if (order.getStatus() == Order.STATUS_COMPLETED) {
+                int totalItemCount = items.size();
+                int reviewedCount = orderReviewMapper.countByOrderId(order.getId());
+                vo.setTotalItemCount(totalItemCount);
+                vo.setReviewedCount(reviewedCount);
+                if (reviewedCount == 0) {
+                    vo.setReviewStatus(OrderVO.REVIEW_STATUS_NONE);
+                    vo.setReviewed(false);
+                } else if (reviewedCount < totalItemCount) {
+                    vo.setReviewStatus(OrderVO.REVIEW_STATUS_PARTIAL);
+                    vo.setReviewed(true);
+                } else {
+                    vo.setReviewStatus(OrderVO.REVIEW_STATUS_ALL);
+                    vo.setReviewed(true);
+                }
+            }
+            return vo;
         }).collect(Collectors.toList());
 
         return PageResult.of(orderVOs, total, page, size);
@@ -167,7 +187,27 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> items = orderItemMapper.findByOrderId(id);
         order.setItems(items);
 
-        return OrderVO.fromOrder(order);
+        OrderVO vo = OrderVO.fromOrder(order);
+        if (order.getStatus() == Order.STATUS_COMPLETED) {
+            List<OrderReview> reviews = orderReviewMapper.findByOrderId(id);
+            vo.setReviews(reviews);
+            int totalItemCount = items.size();
+            int reviewedCount = reviews.size();
+            vo.setTotalItemCount(totalItemCount);
+            vo.setReviewedCount(reviewedCount);
+            if (reviewedCount == 0) {
+                vo.setReviewStatus(OrderVO.REVIEW_STATUS_NONE);
+                vo.setReviewed(false);
+            } else if (reviewedCount < totalItemCount) {
+                vo.setReviewStatus(OrderVO.REVIEW_STATUS_PARTIAL);
+                vo.setReviewed(true);
+            } else {
+                vo.setReviewStatus(OrderVO.REVIEW_STATUS_ALL);
+                vo.setReviewed(true);
+            }
+        }
+
+        return vo;
     }
 
     @Override
@@ -261,5 +301,45 @@ public class OrderServiceImpl implements OrderService {
         // 先删除订单项，再删除订单（解决外键约束问题）
         orderItemMapper.deleteByOrderId(id);
         orderMapper.delete(id);
+    }
+
+    @Override
+    @Transactional
+    public void submitReview(Long orderId, Long userId, OrderReviewRequest request) {
+        Order order = orderMapper.findByIdAndUserId(orderId, userId);
+        if (order == null) {
+            throw new BusinessException(ResultCode.ORDER_NOT_FOUND);
+        }
+        if (order.getStatus() != Order.STATUS_COMPLETED) {
+            throw new BusinessException("只有已完成的订单才能评价");
+        }
+
+        OrderItem orderItem = orderItemMapper.findById(request.getOrderItemId());
+        if (orderItem == null || !orderItem.getOrderId().equals(orderId)) {
+            throw new BusinessException("订单项不存在");
+        }
+
+        OrderReview existingReview = orderReviewMapper.findByOrderItemId(request.getOrderItemId());
+        if (existingReview != null) {
+            throw new BusinessException("该商品已评价，不能重复评价");
+        }
+
+        OrderReview review = new OrderReview();
+        review.setOrderId(orderId);
+        review.setUserId(userId);
+        review.setOrderItemId(request.getOrderItemId());
+        review.setFruitId(orderItem.getFruitId());
+        review.setRating(request.getRating());
+        review.setContent(request.getContent());
+        orderReviewMapper.insert(review);
+    }
+
+    @Override
+    public List<OrderReview> getOrderReviews(Long orderId, Long userId) {
+        Order order = orderMapper.findByIdAndUserId(orderId, userId);
+        if (order == null) {
+            throw new BusinessException(ResultCode.ORDER_NOT_FOUND);
+        }
+        return orderReviewMapper.findByOrderId(orderId);
     }
 }

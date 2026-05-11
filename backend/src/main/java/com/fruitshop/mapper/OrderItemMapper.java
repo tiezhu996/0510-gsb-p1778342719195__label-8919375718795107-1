@@ -9,6 +9,8 @@ import java.util.List;
 @Mapper
 public interface OrderItemMapper {
 
+    OrderItem findById(@Param("id") Long id);
+
     List<OrderItem> findByOrderId(@Param("orderId") Long orderId);
 
     int insert(OrderItem item);
