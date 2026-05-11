@@ -148,3 +148,25 @@ CREATE TABLE IF NOT EXISTS `order_item` (
     KEY `idx_order_id` (`order_id`),
     CONSTRAINT `fk_item_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单商品表';
+
+-- 评价表
+CREATE TABLE IF NOT EXISTS `review` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '评价ID',
+    `order_id` BIGINT NOT NULL COMMENT '订单ID',
+    `order_item_id` BIGINT NOT NULL COMMENT '订单项ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `fruit_id` BIGINT NOT NULL COMMENT '商品ID',
+    `rating` TINYINT NOT NULL COMMENT '评分(1-5)',
+    `content` VARCHAR(1000) DEFAULT NULL COMMENT '评价内容',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_order_id` (`order_id`),
+    KEY `idx_order_item_id` (`order_item_id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_fruit_id` (`fruit_id`),
+    UNIQUE KEY `uk_order_item_id` (`order_item_id`),
+    CONSTRAINT `fk_review_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
+    CONSTRAINT `fk_review_order_item` FOREIGN KEY (`order_item_id`) REFERENCES `order_item` (`id`),
+    CONSTRAINT `fk_review_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评价表';
