@@ -3,12 +3,16 @@ package com.fruitshop.controller;
 import com.fruitshop.common.PageResult;
 import com.fruitshop.common.Result;
 import com.fruitshop.dto.request.OrderCreateRequest;
+import com.fruitshop.dto.request.ReviewCreateRequest;
 import com.fruitshop.service.OrderService;
+import com.fruitshop.service.ReviewService;
 import com.fruitshop.util.RequestContext;
 import com.fruitshop.vo.OrderVO;
+import com.fruitshop.vo.ReviewVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -16,9 +20,11 @@ import java.util.Map;
 public class OrderController {
 
     private final OrderService orderService;
+    private final ReviewService reviewService;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, ReviewService reviewService) {
         this.orderService = orderService;
+        this.reviewService = reviewService;
     }
 
     @PostMapping("/create")
@@ -79,5 +85,21 @@ public class OrderController {
         Long userId = RequestContext.getUserId();
         orderService.deleteOrder(id, userId);
         return Result.success();
+    }
+
+    @PostMapping("/{orderId}/review")
+    public Result<ReviewVO> createReview(
+            @PathVariable Long orderId,
+            @Valid @RequestBody ReviewCreateRequest request) {
+        Long userId = RequestContext.getUserId();
+        ReviewVO reviewVO = reviewService.createReview(userId, orderId, request);
+        return Result.success(reviewVO);
+    }
+
+    @GetMapping("/{orderId}/reviews")
+    public Result<List<ReviewVO>> getReviews(@PathVariable Long orderId) {
+        Long userId = RequestContext.getUserId();
+        List<ReviewVO> reviews = reviewService.getReviewsByOrderId(orderId, userId);
+        return Result.success(reviews);
     }
 }

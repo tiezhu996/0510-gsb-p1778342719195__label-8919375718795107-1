@@ -8,7 +8,6 @@ import com.fruitshop.exception.BusinessException;
 import com.fruitshop.mapper.*;
 import com.fruitshop.service.OrderService;
 import com.fruitshop.util.OrderNoUtil;
-import com.fruitshop.vo.CartVO;
 import com.fruitshop.vo.OrderVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,18 +28,20 @@ public class OrderServiceImpl implements OrderService {
     private final AddressMapper addressMapper;
     private final FruitMapper fruitMapper;
     private final FruitSpecMapper fruitSpecMapper;
+    private final ReviewMapper reviewMapper;
     private final OrderNoUtil orderNoUtil;
 
     public OrderServiceImpl(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
                             CartMapper cartMapper, AddressMapper addressMapper,
                             FruitMapper fruitMapper, FruitSpecMapper fruitSpecMapper,
-                            OrderNoUtil orderNoUtil) {
+                            ReviewMapper reviewMapper, OrderNoUtil orderNoUtil) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
         this.cartMapper = cartMapper;
         this.addressMapper = addressMapper;
         this.fruitMapper = fruitMapper;
         this.fruitSpecMapper = fruitSpecMapper;
+        this.reviewMapper = reviewMapper;
         this.orderNoUtil = orderNoUtil;
     }
 
@@ -147,11 +148,13 @@ public class OrderServiceImpl implements OrderService {
         List<Order> orders = orderMapper.findByUserId(userId, status, offset, size);
         long total = orderMapper.countByUserId(userId, status);
 
-        // 获取订单项
         List<OrderVO> orderVOs = orders.stream().map(order -> {
             List<OrderItem> items = orderItemMapper.findByOrderId(order.getId());
             order.setItems(items);
-            return OrderVO.fromOrder(order);
+            OrderVO orderVO = OrderVO.fromOrder(order);
+            int reviewCount = reviewMapper.countByOrderId(order.getId());
+            orderVO.setHasReview(reviewCount > 0);
+            return orderVO;
         }).collect(Collectors.toList());
 
         return PageResult.of(orderVOs, total, page, size);
@@ -167,7 +170,11 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> items = orderItemMapper.findByOrderId(id);
         order.setItems(items);
 
-        return OrderVO.fromOrder(order);
+        OrderVO orderVO = OrderVO.fromOrder(order);
+        int reviewCount = reviewMapper.countByOrderId(id);
+        orderVO.setHasReview(reviewCount > 0);
+
+        return orderVO;
     }
 
     @Override

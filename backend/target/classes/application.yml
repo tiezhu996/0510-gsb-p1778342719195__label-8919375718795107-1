@@ -1,0 +1,43 @@
+# FruitShop Application Configuration
+app:
+  name: FruitShop
+  version: 1.0.0
+
+# Database Configuration
+datasource:
+  driver-class-name: com.mysql.cj.jdbc.Driver
+  url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:fruitshop}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+  username: ${MYSQL_USERNAME:fruitshop}
+  password: ${MYSQL_PASSWORD:fruitshop123}
+  # HikariCP Settings
+  hikari:
+    minimum-idle: 5
+    maximum-pool-size: 20
+    idle-timeout: 30000
+    pool-name: FruitShopHikariCP
+    max-lifetime: 1800000
+    connection-timeout: 30000
+
+# MyBatis Configuration
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.fruitshop.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:fruitshop-jwt-secret-key-2026-very-long-secret}
+  expiration: 7200000  # 2 hours in milliseconds
+  remember-expiration: 604800000  # 7 days in milliseconds
+  header: Authorization
+  prefix: Bearer
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.fruitshop: DEBUG
+    org.springframework: INFO
+    org.mybatis: DEBUG
