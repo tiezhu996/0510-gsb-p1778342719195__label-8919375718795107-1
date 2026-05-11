@@ -6,6 +6,7 @@ import com.fruitshop.entity.OrderItem;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 public class OrderVO {
     private Long id;
@@ -28,6 +29,8 @@ public class OrderVO {
     private LocalDateTime cancelTime;
     private Integer itemCount;
     private List<OrderItem> items;
+    private Boolean reviewed;
+    private Set<Long> reviewedItemIds;
 
     public static OrderVO fromOrder(Order order) {
         OrderVO vo = new OrderVO();
@@ -219,5 +222,21 @@ public class OrderVO {
 
     public void setItems(List<OrderItem> items) {
         this.items = items;
+    }
+
+    public Boolean getReviewed() {
+        return reviewed;
+    }
+
+    public void setReviewed(Boolean reviewed) {
+        this.reviewed = reviewed;
+    }
+
+    public Set<Long> getReviewedItemIds() {
+        return reviewedItemIds;
+    }
+
+    public void setReviewedItemIds(Set<Long> reviewedItemIds) {
+        this.reviewedItemIds = reviewedItemIds;
     }
 }

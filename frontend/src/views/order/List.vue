@@ -33,6 +33,18 @@
             <span :class="['text-sm font-medium', statusColor(order.status)]">
               {{ statusText(order.status) }}
             </span>
+            <span
+              v-if="order.status === 3 && order.reviewed"
+              class="text-xs text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full ml-2"
+            >
+              已评价
+            </span>
+            <span
+              v-if="order.status === 3 && !order.reviewed && order.reviewedItemIds && order.reviewedItemIds.length > 0"
+              class="text-xs text-primary-500 bg-primary-50 px-2 py-0.5 rounded-full ml-2"
+            >
+              部分评价
+            </span>
           </div>
 
           <!-- Order Items -->
@@ -87,6 +99,13 @@
                 class="px-4 py-1.5 rounded-full bg-primary-500 text-white text-sm hover:bg-primary-600 transition"
               >
                 确认收货
+              </button>
+              <button
+                v-if="order.status === 3 && !order.reviewed"
+                @click.prevent="$router.push(`/order/detail/${order.id}`)"
+                class="px-4 py-1.5 rounded-full bg-primary-500 text-white text-sm hover:bg-primary-600 transition"
+              >
+                待评价
               </button>
               <button
                 v-if="order.status === 3 || order.status === 4"
@@ -175,6 +194,8 @@ async function fetchOrders() {
     orders.value = rawOrders.map(order => ({
       ...order,
       totalPrice: order.payAmount,
+      reviewed: order.reviewed || false,
+      reviewedItemIds: order.reviewedItemIds || [],
       items: (order.items || []).map(item => ({
         ...item,
         name: item.fruitName,

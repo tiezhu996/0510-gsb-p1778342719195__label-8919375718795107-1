@@ -67,9 +67,22 @@
               />
             </router-link>
             <div class="flex-1 min-w-0">
-              <router-link :to="`/fruit/${item.fruitId}`" class="text-sm font-medium line-clamp-1 hover:text-primary-500">
-                {{ item.name }}
-              </router-link>
+              <div class="flex items-center gap-2">
+                <router-link :to="`/fruit/${item.fruitId}`" class="text-sm font-medium line-clamp-1 hover:text-primary-500">
+                  {{ item.name }}
+                </router-link>
+                <span
+                  v-if="order.status === 3 && order.reviewedItemIds"
+                  :class="[
+                    'text-xs px-1.5 py-0.5 rounded-full flex-shrink-0',
+                    order.reviewedItemIds.includes(item.id)
+                      ? 'text-amber-600 bg-amber-50'
+                      : 'text-slate-400 bg-slate-50'
+                  ]"
+                >
+                  {{ order.reviewedItemIds.includes(item.id) ? '已评价' : '未评价' }}
+                </span>
+              </div>
               <p v-if="item.spec" class="text-xs text-slate-400 mt-1">{{ item.spec }}</p>
               <div class="flex items-center justify-between mt-2">
                 <span class="text-primary-500">¥{{ item.price }}</span>
@@ -99,6 +112,42 @@
           <div v-if="order.note" class="flex justify-between">
             <span class="text-slate-500">备注</span>
             <span class="text-slate-700">{{ order.note }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reviews (for completed orders with reviews) -->
+      <section v-if="order.status === 3 && reviews.length > 0" class="bg-white rounded-3xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-medium">评价信息</h3>
+          <span
+            v-if="!order.reviewed && unreviewedItems.length > 0"
+            class="text-xs text-slate-400"
+          >
+            还有 {{ unreviewedItems.length }} 件商品待评价
+          </span>
+        </div>
+        <div class="space-y-4">
+          <div
+            v-for="review in reviews"
+            :key="review.id"
+            class="border-b border-slate-100 pb-4 last:border-b-0 last:pb-0"
+          >
+            <div class="flex gap-3 mb-2">
+              <img :src="review.image" :alt="review.name" class="w-10 h-10 rounded-lg object-cover" />
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium line-clamp-1">{{ review.name }}</p>
+                <div class="flex items-center gap-1 mt-1">
+                  <i
+                    v-for="star in 5"
+                    :key="star"
+                    :class="['fa-solid fa-star text-xs', star <= review.rating ? 'text-amber-400' : 'text-slate-200']"
+                  ></i>
+                </div>
+              </div>
+              <span class="text-xs text-slate-400">{{ review.createTime }}</span>
+            </div>
+            <p v-if="review.content" class="text-sm text-slate-600 ml-13">{{ review.content }}</p>
           </div>
         </div>
       </section>
@@ -151,6 +200,13 @@
           确认收货
         </button>
         <button
+          v-if="order.status === 3 && !order.reviewed"
+          @click="reviewFormVisible = true"
+          class="px-6 py-2 rounded-2xl bg-primary-500 text-white hover:bg-primary-600 transition"
+        >
+          待评价
+        </button>
+        <button
           v-if="order.status === 3"
           @click="handleBuyAgain"
           class="px-6 py-2 rounded-2xl bg-primary-500 text-white hover:bg-primary-600 transition"
@@ -171,6 +227,12 @@
       :confirmText="dialogConfig.confirmText"
       @confirm="handleDialogConfirm"
     />
+
+    <ReviewForm
+      v-model:visible="reviewFormVisible"
+      :items="unreviewedItems"
+      @submit="handleSubmitReviews"
+    />
   </div>
 </template>
 
@@ -180,7 +242,8 @@ import { useRoute, useRouter } from 'vue-router'
 import NavBar from '@/components/common/NavBar.vue'
 import Loading from '@/components/common/Loading.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
-import { getOrderDetail, payOrder, cancelOrder, receiveOrder } from '@/api/order'
+import ReviewForm from '@/components/common/ReviewForm.vue'
+import { getOrderDetail, payOrder, cancelOrder, receiveOrder, submitReview, getOrderReviews } from '@/api/order'
 import { showToast } from '@/utils/toast'
 import { useCartStore } from '@/stores/cart'
 
@@ -198,6 +261,15 @@ const dialogConfig = ref({
   type: 'warning',
   confirmText: '确定',
   action: null
+})
+
+const reviewFormVisible = ref(false)
+const reviews = ref([])
+
+const unreviewedItems = computed(() => {
+  if (!order.value || order.value.status !== 3) return []
+  const reviewedIds = order.value.reviewedItemIds || []
+  return order.value.items.filter(item => !reviewedIds.includes(item.id))
 })
 
 const statusText = computed(() => {
@@ -229,7 +301,6 @@ async function fetchDetail() {
   loading.value = true
   try {
     const rawOrder = await getOrderDetail(route.params.id)
-    // 转换后端数据格式到前端期望格式
     order.value = {
       ...rawOrder,
       totalPrice: rawOrder.payAmount,
@@ -237,6 +308,8 @@ async function fetchDetail() {
       shippingFee: rawOrder.freight,
       discount: 0,
       note: rawOrder.remark,
+      reviewed: rawOrder.reviewed || false,
+      reviewedItemIds: rawOrder.reviewedItemIds || [],
       logisticsCompany: rawOrder.logisticsCompany || null,
       logisticsNo: rawOrder.logisticsNo || null,
       createTime: formatDateTime(rawOrder.createTime),
@@ -255,6 +328,9 @@ async function fetchDetail() {
         image: item.fruitImage,
         spec: item.specName
       }))
+    }
+    if (rawOrder.status === 3 && rawOrder.reviewedItemIds && rawOrder.reviewedItemIds.length > 0) {
+      await fetchReviews()
     }
   } catch {
     order.value = {
@@ -346,18 +422,45 @@ async function handleDialogConfirm() {
 
 async function handleBuyAgain() {
   try {
-    // 将订单中的所有商品重新加入购物车
     for (const item of order.value.items) {
-      // 获取规格ID：这里需要从商品数据中获取，暂时使用 fruitId 作为默认值
-      // 实际场景中需要根据商品规格匹配对应的 specId
       await cartStore.addToCart(item.fruitId, 1, item.quantity)
     }
     showToast('已加入购物车', 'success')
     router.push('/cart')
   } catch (error) {
-    // 如果部分商品已下架或库存不足，显示提示
     console.error('再次购买失败:', error)
     showToast('部分商品已下架或库存不足', 'error')
+  }
+}
+
+async function fetchReviews() {
+  try {
+    const data = await getOrderReviews(route.params.id)
+    reviews.value = (data || []).map(r => ({
+      ...r,
+      name: r.fruitName,
+      image: r.fruitImage,
+      createTime: formatDateTime(r.createTime)
+    }))
+  } catch {
+    reviews.value = []
+  }
+}
+
+async function handleSubmitReviews(reviewList) {
+  try {
+    for (const review of reviewList) {
+      await submitReview(order.value.id, {
+        orderItemId: review.orderItemId,
+        rating: review.rating,
+        content: review.content
+      })
+    }
+    showToast('评价成功', 'success')
+    reviewFormVisible.value = false
+    fetchDetail()
+  } catch {
+    // Error handled by interceptor
   }
 }
 </script>

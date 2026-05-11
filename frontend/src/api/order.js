@@ -27,3 +27,11 @@ export function receiveOrder(id) {
 export function deleteOrder(id) {
   return request.delete(`/order/${id}`)
 }
+
+export function submitReview(orderId, data) {
+  return request.post(`/review/order/${orderId}`, data)
+}
+
+export function getOrderReviews(orderId) {
+  return request.get(`/review/order/${orderId}`)
+}
